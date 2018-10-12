@@ -1,4 +1,4 @@
-#!/usr/bin/env python27
+#!/usr/bin/env python
 
 ###########################
 # Imports
@@ -20,8 +20,9 @@ from multiprocessing.dummy import Pool as ThreadPool
 ###########################
 
 # Path where the JSONs will get written. Permissions are your job.
-SAVE_PATH = '/var/www/ssl/files/vub-resto/'
-#SAVE_PATH = './'
+#SAVE_PATH = '/var/www/ssl/files/vub-resto/'
+SAVE_PATH = './'
+#SAVE_PATH = '/home/chris/Software/utils/resto/'
 
 # Urls of the pages that will get parsed
 URL = 'https://student.vub.be/menu-vub-student-restaurant'
@@ -62,7 +63,7 @@ def normalize_text(text):
 
 def check_title(line):
     r"""Check whether line matches a title for a restaurant's week menu.
-    Return campus.language or None.
+    Return campus,language or None.
     """
     # verify format
     line = line.lower()
@@ -154,13 +155,13 @@ def load_and_split(url):
         # Parse into location.language e.g. etterbeek.nl
         resto_key = check_title(resto_title)
         if resto_key is None:
-            logging.exception('Failed to extract restaurant title from {0}                               at URL {1}'.format(div.text_content(), url))
+            logging.exception('Failed to extract restaurant title from {0} at URL {1}'.format(div.text_content(), url))
             continue
         # Store daily menus
         data[resto_key] = sections[1:]
     return data
 
-def parse_restaurant(name, week):
+def parse_restaurant((name, week)):
     r"""Parse the weekly menu for one restaurant.
     """
     data = []
@@ -179,53 +180,53 @@ def parse_restaurant(name, week):
             prev_date = date # store for next iteration
         else:
             # If we couldn't parse the date, we try to use the previous date
-            logging.warning("{0} - Failed to parse date {1}".format(name, date_string))
+            logging.warning("{0} - Failed to parse: date {1}".format(name, date_string))
             try:
                 date = prev_date + datetime.timedelta(days=1)
                 prev_date = date
             except Exception:
                 # If we can't find any date, we'll skip the day
-                logging.exception("{0} - Couldn't derive date                                       from previous dates".format(name))
+                logging.exception("{0}/{1} - Failed to parse: couldn't derive date from previous dates".format(name, date_string))
 
         meals = sel_meals(day)
         for m in meals:
-            m = parse_menu(m.text_content())
+            try:
+                m = parse_menu(m.text_content())
+            except Exception:
+                logging.exception("{0}/{1} - Failed to parse: menu {2}".format(name, date_string, m))
             #if m['dish']:
             menus.append(m)
 
         data.append({'date': str(date), 'menus': menus})
-    return data
+    return name, data
 
 ###########################
 # Output
 ###########################
 
-def write_to_json(data, filename):
+def write_to_json((name, data)):
+    filename = name.lower() + '.json'
     with io.open(os.path.join(SAVE_PATH, filename), 'w', encoding='utf8') as f:
-        f.write(unicode(json.dumps(data, ensure_ascii=False)))
+        try:
+            f.write(unicode(json.dumps(data, ensure_ascii=False)))
+        except Exception:
+            logging.exception(name + " - Failed to save to json")
 
-
-def parse_and_save((name, week)):
-    try:
-        data = parse_restaurant(name, week)
-    except Exception:
-        logging.exception(name + " - Failed to parse")
-        data = []
-    try:
-        write_to_json(data, name.lower() + '.json')
-    except Exception:
-        logging.exception(name + " - Failed to save to json")
-
+###########################
+# Main
+###########################
 
 def main():
     # Configure the logger
-    logging.basicConfig(filename='menuparser.log', level='WARNING')
+    logging.basicConfig(filename=SAVE_PATH+'menuparser.log', level='WARNING')
     
+    # Fetch webpage and split into weekly menus
     content = load_and_split(URL)
     
-    # Parse and save the 2 restaurants
+    # Parse and save the 2 restaurants x 2 languages
     pool = ThreadPool(4)
-    pool.map(parse_and_save, content.items())
+    parsed = pool.map(parse_restaurant, content.items())
+    pool.map(write_to_json, parsed)
 
 
 if __name__ == "__main__":
