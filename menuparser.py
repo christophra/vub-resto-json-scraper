@@ -20,12 +20,12 @@ from multiprocessing.dummy import Pool as ThreadPool
 ###########################
 
 # Path where the JSONs will get written. Permissions are your job.
-#SAVE_PATH = '/var/www/ssl/files/vub-resto/'
-SAVE_PATH = './'
+SAVE_PATH = '/var/www/ssl/files/vub-resto/'
 #SAVE_PATH = '/home/chris/Software/utils/resto/'
+#SAVE_PATH = './'
 
 # Urls of the pages that will get parsed
-URL = 'https://student.vub.be/menu-vub-student-restaurant'
+URL = 'https://student.vub.be/en/menu-vub-student-restaurant'
 
 
 # Mapping of colors for the menus.
