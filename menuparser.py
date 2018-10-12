@@ -21,7 +21,6 @@ from multiprocessing.dummy import Pool as ThreadPool
 
 # Path where the JSONs will get written. Permissions are your job.
 SAVE_PATH = '/var/www/ssl/files/vub-resto/'
-#SAVE_PATH = '/home/chris/Software/utils/resto/'
 #SAVE_PATH = './'
 
 # Urls of the pages that will get parsed
